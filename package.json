@@ -1,11 +1,14 @@
 {
-  "name": "cei-crawler",
+  "name": "@warrenbrasil/cei-crawler",
   "version": "2.1.0",
   "description": "Crawler para pegar dados do Canal Eletronico do Investidor",
   "main": "src/app.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/warrenbrasil/cei-crawler"
+  },
+  "bugs": {
+    "url": "https://github.com/warrenbrasil/cei-crawler/issues"
   },
   "homepage": "https://github.com/warrenbrasil/cei-crawler#readme",
   "scripts": {
