@@ -5,9 +5,9 @@
   "main": "src/app.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Menighin/cei-crawler.git"
+    "url": "https://github.com/warrenbrasil/cei-crawler"
   },
-  "homepage": "https://github.com/Menighin/cei-crawler#readme",
+  "homepage": "https://github.com/warrenbrasil/cei-crawler#readme",
   "scripts": {
     "dev": "node src/app.js",
     "test": "nyc ava",
