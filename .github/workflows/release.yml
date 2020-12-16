@@ -1,0 +1,41 @@
+name: Release package
+
+on:
+  push:
+    branches:
+      - master
+      - beta
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+
+      - name: Set ups node version
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Restore npm cache
+        uses: actions/cache@v1
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node
+
+      - name: Set up private packages
+        run: echo //npm.pkg.github.com/:_authToken=${{ secrets.NPM_PACKAGE }} >> ~/.npmrc |
+             echo @warrenbrasil:registry=https://npm.pkg.github.com/ >> ~/.npmrc
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run release
+        run: npm run release
+        env:
+          GITHUB_TOKEN: ${{ secrets.NPM_PACKAGE }}

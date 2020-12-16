@@ -15,7 +15,8 @@
     "dev": "node src/app.js",
     "test": "nyc ava",
     "ava": "ava",
-    "coverage": "nyc report --reporter=text-lcov | coveralls"
+    "coverage": "nyc report --reporter=text-lcov | coveralls", 
+    "release": "semantic-release"
   },
   "keywords": [
     "cei",
@@ -23,6 +24,10 @@
     "acoes",
     "investir"
   ],
+  "publishConfig": {
+    "access": "restricted",
+    "registry": "https://npm.pkg.github.com"
+  },
   "author": "Joao Menighin <joao.menighin@gmail.com>",
   "license": "MIT",
   "dependencies": {
@@ -34,6 +39,8 @@
     "tough-cookie": "^4.0.0"
   },
   "devDependencies": {
+    "@semantic-release/changelog": "^5.0.1",
+    "@semantic-release/git": "^9.0.0",
     "@babel/core": "^7.9.0",
     "@babel/plugin-proposal-class-properties": "^7.8.3",
     "@babel/preset-env": "^7.9.5",
