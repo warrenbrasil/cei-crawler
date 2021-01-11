@@ -6,54 +6,44 @@ const cheerio = require('cheerio');
 const normalizeWhitespace = require('normalize-html-whitespace');
 
 const PAGE = {
-    URL: 'https://ceiapp.b3.com.br/CEI_Responsivo/ConsultarProventos.aspx',
-    SUBMIT_BUTTON: '#ctl00_ContentPlaceHolder1_btnConsultar',
-    TABLE_CLASS: '.responsive tbody',
-    TABLE_CLASS_ROWS: '.responsive tbody tr',
-    DATE_MIN_VALUE: '#ctl00_ContentPlaceHolder1_lblPeriodoInicial',
-    DATE_MAX_VALUE: '#ctl00_ContentPlaceHolder1_lblPeriodoFinal',
-    DATE_INPUT: '#ctl00_ContentPlaceHolder1_txtData',
+    URL: 'https://ceiapp.b3.com.br/CEI_Responsivo/ConsultarBTC.aspx',
     SELECT_INSTITUTION: '#ctl00_ContentPlaceHolder1_ddlAgentes',
     SELECT_INSTITUTION_OPTIONS: '#ctl00_ContentPlaceHolder1_ddlAgentes option',
     SELECT_ACCOUNT: '#ctl00_ContentPlaceHolder1_ddlContas',
     SELECT_ACCOUNT_OPTIONS: '#ctl00_ContentPlaceHolder1_ddlContas option',
+    DATE_INPUT: '#ctl00_ContentPlaceHolder1_txtData',
+    DATE_MIN_VALUE: '#ctl00_ContentPlaceHolder1_lblPeriodoInicial',
+    DATE_MAX_VALUE: '#ctl00_ContentPlaceHolder1_lblPeriodoFinal',
+    ALERT_BOX: '.alert-box',
+    SUBMIT_BUTTON: '#ctl00_ContentPlaceHolder1_btnConsultar',
+    LOANS_TABLE: '#ctl00_ContentPlaceHolder1_rptAgente_ctl00_rptContas_ctl00_Nova',
+    LOANS_TABLE_BODY: '#ctl00_ContentPlaceHolder1_rptAgente_ctl00_rptContas_ctl00_Nova tbody',
+    LOANS_TABLE_BODY_ROWS: '#ctl00_ContentPlaceHolder1_rptAgente_ctl00_rptContas_ctl00_Nova tbody tr',    
+    RESULT_FOOTER_100: '#ctl00_ContentPlaceHolder1_rptAgente_ctl00_rptContas_ctl00_Nova tfoot',
     PAGE_ALERT_ERROR: '.alert-box.alert',
-    PAGE_ALERT_SUCCESS: '.alert-box.success',
-    TABLE_TITLE_SELECTOR: 'p.title',
-    PAST_EVENTS_TITLE: 'Eventos em Dinheiro Creditado',
-    FUTURE_EVENTS_TITLE: 'Eventos em Dinheiro Provisionado',
-    PAST_ACTIVE_EVENTS_TITLE: 'Eventos em Ativos Creditado',
-    FUTURE_ACTIVE_EVENTS_TITLE: 'Eventos em Ativos Provisionado'
+    PAGE_ALERT_SUCCESS: '.alert-box.success'
 }
 
-const DIVIDENDS_MONEY_TABLE_HEADERS = {
-    stock: 'string',
-    stockType: 'string',
+const LOANS_TABLE_HEADER = {
     code: 'string',
-    date: 'date',
-    type: 'string',
+    isin: 'string',
     quantity: 'int',
-    factor: 'int',
-    grossValue: 'float',
-    netValue: 'float'
-};
-
-const DIVIDENDS_ACTIVE_TABLE_HEADERS = {
-    stock: 'string',
-    stockType: 'string',
-    code: 'string',
-    type: 'string',
-    date: 'date',
-    quantity: 'int',
-    factor: 'int',
-    codeDestiny: 'string',
-    quantityActive: 'int',
-    eventValue: 'float',
-    exerciseValue: 'float'
+    nature: 'string',
+    taxTaker: 'floatPoint',
+    taxDonor: 'floatPoint',
+    commissionTaker: 'floatPoint',
+    commissionDonor: 'floatPoint',
+    registerDate: 'date',
+    dueDate: 'date',
+    allowEarlySettlement: 'boolean',
+    referencePrice: 'float',
+    financialVolume: 'float',
+    contractNumber: 'string',
+    modality: 'string'
 };
 
 const FETCH_OPTIONS = {
-    DIVIDENDS_INSTITUTION: {
+    LOAN_INSTITUTION: {
         "headers": {
           "accept": "*/*",
           "accept-language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -65,14 +55,14 @@ const FETCH_OPTIONS = {
           "x-microsoftajax": "Delta=true",
           "x-requested-with": "XMLHttpRequest"
         },
-        "referrer": "https://ceiapp.b3.com.br/CEI_Responsivo/ConsultarProventos.aspx",
+        "referrer": "https://ceiapp.b3.com.br/CEI_Responsivo/ConsultarCarteiraAtivos.aspx",
         "referrerPolicy": "strict-origin-when-cross-origin",
         "body": null,
         "method": "POST",
         "mode": "cors",
         "credentials": "include"
-      },
-    DIVIDENDS_ACCOUNT:  {
+    },
+    LOAN_ACCOUNT:  {
         "headers": {
           "accept": "*/*",
           "accept-language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -84,7 +74,7 @@ const FETCH_OPTIONS = {
           "x-microsoftajax": "Delta=true",
           "x-requested-with": "XMLHttpRequest"
         },
-        "referrer": "https://ceiapp.b3.com.br/CEI_Responsivo/ConsultarProventos.aspx",
+        "referrer": "https://ceiapp.b3.com.br/CEI_Responsivo/ConsultarCarteiraAtivos.aspx",
         "referrerPolicy": "strict-origin-when-cross-origin",
         "body": null,
         "method": "POST",
@@ -94,7 +84,7 @@ const FETCH_OPTIONS = {
 };
 
 const FETCH_FORMS = {
-    DIVIDENDS_INSTITUTION: [
+    LOAN_INSTITUTION: [
         'ctl00$ContentPlaceHolder1$ToolkitScriptManager1',
         'ctl00_ContentPlaceHolder1_ToolkitScriptManager1_HiddenField',
         '__EVENTTARGET',
@@ -108,7 +98,7 @@ const FETCH_FORMS = {
         'ctl00$ContentPlaceHolder1$txtData',
         '__ASYNCPOST'
     ],
-    DIVIDENDS_ACCOUNT: [
+    LOAN_ACCOUNT: [
         'ctl00$ContentPlaceHolder1$ToolkitScriptManager1',
         'ctl00_ContentPlaceHolder1_ToolkitScriptManager1_HiddenField',
         'ctl00$ContentPlaceHolder1$ddlAgentes',
@@ -125,37 +115,41 @@ const FETCH_FORMS = {
     ]
 }
 
-class DividendsCrawler {
+class LoansCrawler {
 
     /**
-     * Gets dividends data available on CEI page.
+     * Get the loans data from CEI
      * @param {FetchCookieManager} cookieManager - FetchCookieManager to work with
-     * @param {Date} [date] - The date of the history. If none passed, the default of CEI will be used
-     * @returns {Promise<typedefs.DividendData>} - List of available Dividends information
+     * @param {typedefs.CeiCrawlerOptions} [options] - Options for the crawler
+     * @param {Date} [date] - The date of the loan. If none passed, the default of CEI will be used
+     * @returns {Promise<typedefs.AccountLoan[]>} - List of Stock histories
      */
-    static async getDividends(cookieManager, options = null, date = null) {
-        const getPage = await cookieManager.fetch(PAGE.URL);
-        const domPage = cheerio.load(await getPage.text());
-
+    static async getLoans(cookieManager, options = null, date = null) {
         const traceOperations = (options && options.trace) || false;
 
         const result = [];
 
+        const getPage = await cookieManager.fetch(PAGE.URL);
+        const domPage = cheerio.load(await getPage.text());
+
         // Set date
         if (date !== null) {
+            /* istanbul ignore next */
             const minDateStr = domPage(PAGE.DATE_MIN_VALUE).text().trim();
             const minDate = CeiUtils.getDateFromInput(minDateStr);
 
+            /* istanbul ignore next */
             const maxDateStr = domPage(PAGE.DATE_MAX_VALUE).text().trim();
             const maxDate = CeiUtils.getDateFromInput(maxDateStr);
             
             // Prevent date out of bound if parameter is set
-            if (options.capDates && date < minDate)
+            if (options.capDates && date < minDate) {
                 date = minDate;
+            }
 
-            if (options.capDates && date > maxDate)
+            if (options.capDates && date > maxDate) {
                 date = maxDate;
-
+            }
             domPage(PAGE.DATE_INPUT).attr('value', CeiUtils.getDateForInput(date));
         }
 
@@ -167,7 +161,6 @@ class DividendsCrawler {
             })).get()
             .filter(institution => institution.value > 0);
 
-        // Iterate over institutions, accounts, processing the stocks
         for (const institution of institutions) {
 
             /* istanbul ignore next */
@@ -176,13 +169,13 @@ class DividendsCrawler {
 
             domPage(PAGE.SELECT_INSTITUTION).attr('value', institution.value);
 
-            const formDataInstitution = CeiUtils.extractFormDataFromDOM(domPage, FETCH_FORMS.DIVIDENDS_INSTITUTION, {
+            const formDataInstitution = CeiUtils.extractFormDataFromDOM(domPage, FETCH_FORMS.LOAN_INSTITUTION, {
                 ctl00$ContentPlaceHolder1$ToolkitScriptManager1: 'ctl00$ContentPlaceHolder1$updFiltro|ctl00$ContentPlaceHolder1$ddlAgentes',
                 __EVENTTARGET: 'ctl00$ContentPlaceHolder1$ddlAgentes'
             });
 
             const req = await cookieManager.fetch(PAGE.URL, {
-                ...FETCH_OPTIONS.DIVIDENDS_INSTITUTION,
+                ...FETCH_OPTIONS.LOAN_INSTITUTION,
                 body: formDataInstitution
             });
 
@@ -195,24 +188,22 @@ class DividendsCrawler {
             const accounts = reqInstitutionDOM(PAGE.SELECT_ACCOUNT_OPTIONS)
                 .map((_, option) => option.attribs.value).get()
                 .filter(account => account > 0);
-
+            
             for (const account of accounts) {
+
                 /* istanbul ignore next */
                 if (traceOperations)
                     console.log(`Selecting account ${account}`);
 
                 domPage(PAGE.SELECT_ACCOUNT).attr('value', account);
-
-                const { futureMoneyEvents, pastMoneyEvents, futureActiveEvents, pastActiveEvents } = await this._getDataPage(domPage, cookieManager, traceOperations);
+        
+                const { loans } = await this._getDataPage(domPage, cookieManager, traceOperations);
 
                 // Save the result
                 result.push({
                     institution: institution.label,
                     account: account,
-                    futureMoneyEvents: futureMoneyEvents,
-                    pastMoneyEvents: pastMoneyEvents,
-                    futureActiveEvents: futureActiveEvents,
-                    pastActiveEvents: pastActiveEvents
+                    loans: loans
                 });
             }
         }
@@ -221,19 +212,19 @@ class DividendsCrawler {
     }
 
     /**
-     * Returns the available options to get Dividends data
+     * Returns the available options to get Loan data
      * @param {FetchCookieManager} cookieManager - FetchCookieManager to work with
      * @param {typedefs.CeiCrawlerOptions} [options] - Options for the crawler
-     * @returns {Promise<typedefs.DividendsOptions>} - Options to get data from dividends
+     * @returns {Promise<typedefs.LoanOptions}> - Options to get data from loan
      */
-    static async getDividendsOptions(cookieManager, options = null) {
+    static async getLoansOptions(cookieManager, options = null) {
         const getPage = await cookieManager.fetch(PAGE.URL);
         const domPage = cheerio.load(await getPage.text());
+
 
         const minDateStr = domPage(PAGE.DATE_MIN_VALUE).text().trim();
         const maxDateStr = domPage(PAGE.DATE_MAX_VALUE).text().trim();
 
-        // Get all institutions to iterate
         const institutions = domPage(PAGE.SELECT_INSTITUTION_OPTIONS)
             .map((_, option) => ({
                 value: option.attribs.value,
@@ -244,10 +235,10 @@ class DividendsCrawler {
 
         for (const institution of institutions) {
             domPage(PAGE.SELECT_INSTITUTION).attr('value', institution.value);
-            const formDataStr = CeiUtils.extractFormDataFromDOM(domPage, FETCH_FORMS.DIVIDENDS_INSTITUTION);
+            const formDataStr = CeiUtils.extractFormDataFromDOM(domPage, FETCH_FORMS.LOAN_INSTITUTION);
 
             const getAcountsPage = await cookieManager.fetch(PAGE.URL, {
-                ...FETCH_OPTIONS.DIVIDENDS_INSTITUTION,
+                ...FETCH_OPTIONS.LOAN_INSTITUTION,
                 body: formDataStr
             });
 
@@ -277,63 +268,52 @@ class DividendsCrawler {
      */
     static async _getDataPage(dom, cookieManager, traceOperations) {
         while(true) {
-            const formDataHistory = CeiUtils.extractFormDataFromDOM(dom, FETCH_FORMS.DIVIDENDS_ACCOUNT, {
+            const formDataLoan = CeiUtils.extractFormDataFromDOM(dom, FETCH_FORMS.LOAN_ACCOUNT, {
                 ctl00$ContentPlaceHolder1$ToolkitScriptManager1: 'ctl00$ContentPlaceHolder1$updFiltro|ctl00$ContentPlaceHolder1$btnConsultar',
                 __EVENTARGUMENT: '',
                 __LASTFOCUS: ''
             });
             
-            const dividendsRequest = await cookieManager.fetch(PAGE.URL, {
-                ...FETCH_OPTIONS.DIVIDENDS_ACCOUNT,
-                body: formDataHistory
+            const loanRequest = await cookieManager.fetch(PAGE.URL, {
+                ...FETCH_OPTIONS.LOAN_ACCOUNT,
+                body: formDataLoan
             });
 
-            const dividendsText = normalizeWhitespace(await dividendsRequest.text());
-            const errorMessage = CeiUtils.extractMessagePostResponse(dividendsText);
+            const loansText = normalizeWhitespace(await loanRequest.text());
+            const errorMessage = CeiUtils.extractMessagePostResponse(loansText);
 
             if (errorMessage && errorMessage.type === 2) {
                 throw new CeiCrawlerError(CeiErrorTypes.SUBMIT_ERROR, errorMessage.message);
             }
 
-            const dividendsDOM = cheerio.load(dividendsText);
+            const loansDOM = cheerio.load(loansText);
 
             // Process the page
             /* istanbul ignore next */
             if (traceOperations)
-                console.log(`Processing dividends data`);
+                console.log(`Processing loan data`);
 
-            const futureMoneyEvents = this._processEvents(dividendsDOM, PAGE.FUTURE_EVENTS_TITLE, DIVIDENDS_MONEY_TABLE_HEADERS);
-            const pastMoneyEvents = this._processEvents(dividendsDOM, PAGE.PAST_EVENTS_TITLE, DIVIDENDS_MONEY_TABLE_HEADERS);
-            const futureActiveEvents = this._processEvents(dividendsDOM, PAGE.FUTURE_ACTIVE_EVENTS_TITLE, DIVIDENDS_ACTIVE_TABLE_HEADERS);
-            const pastActiveEvents = this._processEvents(dividendsDOM, PAGE.PAST_ACTIVE_EVENTS_TITLE, DIVIDENDS_ACTIVE_TABLE_HEADERS);
+            const loans = this._processLoans(loansDOM);
 
-            if (errorMessage.type !== undefined || futureMoneyEvents.length > 0 || pastMoneyEvents.length > 0 || futureActiveEvents.length > 0 || pastActiveEvents.length > 0) {
+            if (errorMessage.type !== undefined || this._hasLoadedData(loansDOM)) {
                 return {
-                    futureMoneyEvents,
-                    pastMoneyEvents,
-                    futureActiveEvents,
-                    pastActiveEvents
+                    loans
                 };
             }
             
-            const updtForm = CeiUtils.extractUpdateForm(dividendsText);
+            const updtForm = CeiUtils.extractUpdateForm(loansText);
             CeiUtils.updateFieldsDOM(dom, updtForm);
         }
     }
 
     /**
-     * Process the events given the parameters
+     * Process the stock loan to a DTO
      * @param {cheerio.Root} dom DOM table stock history
-     * @param {String} tableTitle The title of the table to process the events
      */
-    static _processEvents(dom, tableTitle, tableHeaders) {
-        const headers = Object.keys(tableHeaders);
+    static _processLoans(dom) {
+        const headers = Object.keys(LOANS_TABLE_HEADER);
 
-        const data = dom(PAGE.TABLE_TITLE_SELECTOR)
-            .filter((_, el) => dom(el).text().includes(tableTitle))
-            .first()
-            .map((_, el) => dom(el).parent())
-            .map((_, el) => dom(PAGE.TABLE_CLASS_ROWS, el).get())
+        const data = dom(PAGE.LOANS_TABLE_BODY_ROWS)
             .map((_, tr) => dom('td', tr)
                 .map((_, td) => dom(td).text().trim())
                 .get()
@@ -341,11 +321,20 @@ class DividendsCrawler {
                     dict[headers[idx]] = txt;
                     return dict;
                 }, {})
-            )
-            .get();
+            ).get();
 
-        return CeiUtils.parseTableTypes(data, tableHeaders);
+        return CeiUtils.parseTableTypes(data, LOANS_TABLE_HEADER);
     }
+
+    /**
+     * Check wheter the table was rendered on the screen to stop trying to get data
+     * @param {cheerio.Root} dom DOM table stock history
+     */
+    static _hasLoadedData(dom) {
+       const query = dom(`${PAGE.RESULT_FOOTER_100}`);
+       return query.length > 0;
+    }
+
 }
 
-module.exports = DividendsCrawler;
+module.exports = LoansCrawler;

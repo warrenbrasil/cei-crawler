@@ -1,6 +1,10 @@
 const StockHistoryCrawler = require('./StockHistoryCrawler');
 const DividendsCrawler = require('./DividendsCrawler');
 const WalletCrawler = require('./WalletCrawler');
+const LoansCrawler = require('./LoansCrawler');
+const WarrantysCrawler = require('./WarrantysCrawler');
+const CetipStockCrawler = require('./CetipStockCrawler');
+const CetipFurnitureCrawler = require('./CetipFurnitureCrawler');
 const typedefs = require("./typedefs");
 const { CeiCrawlerError, CeiErrorTypes } = require('./CeiCrawlerError');
 const FetchCookieManager = require('./FetchCookieManager');
@@ -183,6 +187,81 @@ class CeiCrawler {
         return await WalletCrawler.getWalletOptions(this._cookieManager, this._options);
     }
 
+    /**
+     * Returns the wallets for each account in CEI
+     * @param {Date} [date] - The date to get the loan
+     * @returns {Promise<typedefs.AccountWallet>} - List of available Dividends information
+     */
+    async getLoans(date) {
+        await this._login();
+        return await LoansCrawler.getLoans(this._cookieManager, this.options, date);
+    }
+
+    /**
+     * Returns the options for the Loans
+     * @returns {Promise<typedefs.WalletOptions>} - Options for wallet
+     */
+    async getLoansOptions() {
+        await this._login();
+        return await LoansCrawler.getLoansOptions(this._cookieManager, this._options);
+    }
+
+    /**
+     * Returns the wallets for each account in CEI
+     * @param {Date} [date] - The date to get the wallet
+     * @returns {Promise<typedefs.AccountWallet>} - List of available Dividends information
+     */
+    async getWarrantys(date) {
+        await this._login();
+        return await WarrantysCrawler.getWarrantys(this._cookieManager, this.options, date);
+    }
+
+    /**
+     * Returns the options for the warranty
+     * @returns {Promise<typedefs.WarrantysOptions>} - Options for warranty
+     */
+    async getWarrantysOptions() {
+        await this._login();
+        return await WarrantysCrawler.getWarrantysOptions(this._cookieManager, this._options);
+    }
+
+    /**
+     * Returns the wallets for each account in CEI
+     * @param {Date} [date] - The date to get the wallet
+     * @returns {Promise<typedefs.AccountWallet>} - List of available Dividends information
+     */
+    async getCetipStock(date) {
+        await this._login();
+        return await CetipStockCrawler.getCetipStock(this._cookieManager, this.options, date);
+    }
+
+    /**
+     * Returns the options for the cetipStock
+     * @returns {Promise<typedefs.CetipStockOptions>} - Options for cetipStock
+     */
+    async getCetipStockOptions() {
+        await this._login();
+        return await CetipStockCrawler.getCetipStockOptions(this._cookieManager, this._options);
+    }
+
+    /**
+     * Returns the wallets for each account in CEI
+     * @param {Date} [date] - The date to get the wallet
+     * @returns {Promise<typedefs.AccountWallet>} - List of available Dividends information
+     */
+    async getCetipFurniture(date) {
+        await this._login();
+        return await CetipFurnitureCrawler.getCetipFurniture(this._cookieManager, this.options, date);
+    }
+
+    /**
+     * Returns the options for the cetipFurnitureCrawler
+     * @returns {Promise<typedefs.CetipFurnitureCrawlerOptions>} - Options for cetipFurnitureCrawler
+     */
+    async getCetipFurnitureOptions() {
+        await this._login();
+        return await CetipFurnitureCrawler.getCetipFurnitureOptions(this._cookieManager, this._options);
+    }
 }
 
 module.exports = CeiCrawler;

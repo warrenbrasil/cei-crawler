@@ -6,54 +6,44 @@ const cheerio = require('cheerio');
 const normalizeWhitespace = require('normalize-html-whitespace');
 
 const PAGE = {
-    URL: 'https://ceiapp.b3.com.br/CEI_Responsivo/ConsultarProventos.aspx',
-    SUBMIT_BUTTON: '#ctl00_ContentPlaceHolder1_btnConsultar',
-    TABLE_CLASS: '.responsive tbody',
-    TABLE_CLASS_ROWS: '.responsive tbody tr',
-    DATE_MIN_VALUE: '#ctl00_ContentPlaceHolder1_lblPeriodoInicial',
-    DATE_MAX_VALUE: '#ctl00_ContentPlaceHolder1_lblPeriodoFinal',
-    DATE_INPUT: '#ctl00_ContentPlaceHolder1_txtData',
+    URL: 'https://ceiapp.b3.com.br/CEI_Responsivo/ConsultarCertifica.aspx?prdt=Consolidado&inst=0',
     SELECT_INSTITUTION: '#ctl00_ContentPlaceHolder1_ddlAgentes',
     SELECT_INSTITUTION_OPTIONS: '#ctl00_ContentPlaceHolder1_ddlAgentes option',
-    SELECT_ACCOUNT: '#ctl00_ContentPlaceHolder1_ddlContas',
-    SELECT_ACCOUNT_OPTIONS: '#ctl00_ContentPlaceHolder1_ddlContas option',
+    SELECT_PRODUCT: '#ctl00_ContentPlaceHolder1_ddlProduto',
+    SELECT_PRODUCT_OPTIONS: '#ctl00_ContentPlaceHolder1_ddlProduto option',
+    DATE_INPUT: '#ctl00_ContentPlaceHolder1_txtData',
+    DATE_MIN_VALUE: '#ctl00_ContentPlaceHolder1_lblPeriodoInicial',
+    DATE_MAX_VALUE: '#ctl00_ContentPlaceHolder1_lblPeriodoFinal',
+    ALERT_BOX: '.alert-box',
+    SUBMIT_BUTTON: '#ctl00_ContentPlaceHolder1_btnConsultar',
+    CETIP_STOCKS_TABLE: '.responsive',
+    CETIP_STOCKS_TABLE_BODY: '.responsive tbody',
+    CETIP_STOCKS_TABLE_BODY_ROWS: '.responsive tbody tr',    
+    RESULT_FOOTER_100: '.responsive tfoot',
     PAGE_ALERT_ERROR: '.alert-box.alert',
-    PAGE_ALERT_SUCCESS: '.alert-box.success',
-    TABLE_TITLE_SELECTOR: 'p.title',
-    PAST_EVENTS_TITLE: 'Eventos em Dinheiro Creditado',
-    FUTURE_EVENTS_TITLE: 'Eventos em Dinheiro Provisionado',
-    PAST_ACTIVE_EVENTS_TITLE: 'Eventos em Ativos Creditado',
-    FUTURE_ACTIVE_EVENTS_TITLE: 'Eventos em Ativos Provisionado'
+    PAGE_ALERT_SUCCESS: '.alert-box.success'
 }
 
-const DIVIDENDS_MONEY_TABLE_HEADERS = {
-    stock: 'string',
-    stockType: 'string',
-    code: 'string',
-    date: 'date',
-    type: 'string',
-    quantity: 'int',
-    factor: 'int',
-    grossValue: 'float',
-    netValue: 'float'
-};
-
-const DIVIDENDS_ACTIVE_TABLE_HEADERS = {
-    stock: 'string',
-    stockType: 'string',
+const CETIP_STOCKS_TABLE_HEADER = {
+    onDate: 'date',
+    instrument: 'string',
     code: 'string',
     type: 'string',
-    date: 'date',
-    quantity: 'int',
-    factor: 'int',
-    codeDestiny: 'string',
-    quantityActive: 'int',
-    eventValue: 'float',
-    exerciseValue: 'float'
+    issuer: 'string',
+    indexer: 'string',
+    issueDate: 'date',
+    dueDate: 'date',
+    quantityAvail: 'int',
+    quantityUnavail: 'int',
+    burdensQuantityReceived: 'int',
+    burdensQuantityProvided: 'int',
+    counterpart: 'string',
+    observation: 'string',
+    borderQuantityProvided: 'int',
 };
 
 const FETCH_OPTIONS = {
-    DIVIDENDS_INSTITUTION: {
+    CETIP_STOCK_INSTITUTION: {
         "headers": {
           "accept": "*/*",
           "accept-language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -65,14 +55,14 @@ const FETCH_OPTIONS = {
           "x-microsoftajax": "Delta=true",
           "x-requested-with": "XMLHttpRequest"
         },
-        "referrer": "https://ceiapp.b3.com.br/CEI_Responsivo/ConsultarProventos.aspx",
+        "referrer": "https://ceiapp.b3.com.br/CEI_Responsivo/ConsultarCertifica.aspx?prdt=Consolidado&inst=0",
         "referrerPolicy": "strict-origin-when-cross-origin",
         "body": null,
         "method": "POST",
         "mode": "cors",
         "credentials": "include"
-      },
-    DIVIDENDS_ACCOUNT:  {
+    },
+    CETIP_STOCK_ACCOUNT:  {
         "headers": {
           "accept": "*/*",
           "accept-language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -84,7 +74,7 @@ const FETCH_OPTIONS = {
           "x-microsoftajax": "Delta=true",
           "x-requested-with": "XMLHttpRequest"
         },
-        "referrer": "https://ceiapp.b3.com.br/CEI_Responsivo/ConsultarProventos.aspx",
+        "referrer": "https://ceiapp.b3.com.br/CEI_Responsivo/ConsultarCertifica.aspx?prdt=Consolidado&inst=0",
         "referrerPolicy": "strict-origin-when-cross-origin",
         "body": null,
         "method": "POST",
@@ -94,7 +84,7 @@ const FETCH_OPTIONS = {
 };
 
 const FETCH_FORMS = {
-    DIVIDENDS_INSTITUTION: [
+    CETIP_STOCK_INSTITUTION: [
         'ctl00$ContentPlaceHolder1$ToolkitScriptManager1',
         'ctl00_ContentPlaceHolder1_ToolkitScriptManager1_HiddenField',
         '__EVENTTARGET',
@@ -108,7 +98,7 @@ const FETCH_FORMS = {
         'ctl00$ContentPlaceHolder1$txtData',
         '__ASYNCPOST'
     ],
-    DIVIDENDS_ACCOUNT: [
+    CETIP_STOCK_ACCOUNT: [
         'ctl00$ContentPlaceHolder1$ToolkitScriptManager1',
         'ctl00_ContentPlaceHolder1_ToolkitScriptManager1_HiddenField',
         'ctl00$ContentPlaceHolder1$ddlAgentes',
@@ -125,37 +115,44 @@ const FETCH_FORMS = {
     ]
 }
 
-class DividendsCrawler {
+class CetipStockCrawler {
 
     /**
-     * Gets dividends data available on CEI page.
+     * Get the cetip stocks data from CEI
      * @param {FetchCookieManager} cookieManager - FetchCookieManager to work with
-     * @param {Date} [date] - The date of the history. If none passed, the default of CEI will be used
-     * @returns {Promise<typedefs.DividendData>} - List of available Dividends information
+     * @param {typedefs.CeiCrawlerOptions} [options] - Options for the crawler
+     * @param {Date} [date] - The date of the cetip stock. If none passed, the default of CEI will be used
+     * @returns {Promise<typedefs.AccountCetipStock[]>} - List of Stock histories
      */
-    static async getDividends(cookieManager, options = null, date = null) {
-        const getPage = await cookieManager.fetch(PAGE.URL);
-        const domPage = cheerio.load(await getPage.text());
-
+    static async getCetipStock(cookieManager, options = null, date = null) {
         const traceOperations = (options && options.trace) || false;
 
         const result = [];
 
+        const getPage = await cookieManager.fetch(PAGE.URL);
+        const domPage = cheerio.load(await getPage.text());
+
+        // console.log(domPage.text())
+        
+        // console.log('aqui')
         // Set date
         if (date !== null) {
+            /* istanbul ignore next */
             const minDateStr = domPage(PAGE.DATE_MIN_VALUE).text().trim();
             const minDate = CeiUtils.getDateFromInput(minDateStr);
 
+            /* istanbul ignore next */
             const maxDateStr = domPage(PAGE.DATE_MAX_VALUE).text().trim();
             const maxDate = CeiUtils.getDateFromInput(maxDateStr);
             
             // Prevent date out of bound if parameter is set
-            if (options.capDates && date < minDate)
+            if (options.capDates && date < minDate) {
                 date = minDate;
+            }
 
-            if (options.capDates && date > maxDate)
+            if (options.capDates && date > maxDate) {
                 date = maxDate;
-
+            }
             domPage(PAGE.DATE_INPUT).attr('value', CeiUtils.getDateForInput(date));
         }
 
@@ -167,7 +164,6 @@ class DividendsCrawler {
             })).get()
             .filter(institution => institution.value > 0);
 
-        // Iterate over institutions, accounts, processing the stocks
         for (const institution of institutions) {
 
             /* istanbul ignore next */
@@ -176,64 +172,65 @@ class DividendsCrawler {
 
             domPage(PAGE.SELECT_INSTITUTION).attr('value', institution.value);
 
-            const formDataInstitution = CeiUtils.extractFormDataFromDOM(domPage, FETCH_FORMS.DIVIDENDS_INSTITUTION, {
-                ctl00$ContentPlaceHolder1$ToolkitScriptManager1: 'ctl00$ContentPlaceHolder1$updFiltro|ctl00$ContentPlaceHolder1$ddlAgentes',
-                __EVENTTARGET: 'ctl00$ContentPlaceHolder1$ddlAgentes'
-            });
+            // const formDataInstitution = CeiUtils.extractFormDataFromDOM(domPage, FETCH_FORMS.CETIP_STOCK_INSTITUTION, {
+            //     ctl00$ContentPlaceHolder1$ToolkitScriptManager1: 'ctl00$ContentPlaceHolder1$updFiltro|ctl00$ContentPlaceHolder1$ddlAgentes',
+            //     __EVENTTARGET: 'ctl00$ContentPlaceHolder1$ddlAgentes'
+            // });
 
-            const req = await cookieManager.fetch(PAGE.URL, {
-                ...FETCH_OPTIONS.DIVIDENDS_INSTITUTION,
-                body: formDataInstitution
-            });
+            // const req = await cookieManager.fetch(PAGE.URL, {
+            //     ...FETCH_OPTIONS.CETIP_STOCK_INSTITUTION,
+            //     body: formDataInstitution
+            // });
 
-            const reqInstitutionText = await req.text();
-            const reqInstitutionDOM = cheerio.load(reqInstitutionText);
+            // const reqInstitutionText = await req.text();
+            // const reqInstitutionDOM = cheerio.load(reqInstitutionText);
 
-            const updtForm = CeiUtils.extractUpdateForm(reqInstitutionText);
-            CeiUtils.updateFieldsDOM(domPage, updtForm);
 
-            const accounts = reqInstitutionDOM(PAGE.SELECT_ACCOUNT_OPTIONS)
-                .map((_, option) => option.attribs.value).get()
-                .filter(account => account > 0);
+            // const updtForm = CeiUtils.extractUpdateForm(reqInstitutionText);
+            // CeiUtils.updateFieldsDOM(domPage, updtForm);
 
-            for (const account of accounts) {
-                /* istanbul ignore next */
-                if (traceOperations)
-                    console.log(`Selecting account ${account}`);
+            // const accounts = reqInstitutionDOM(PAGE.SELECT_PRODUCT_OPTIONS)
+            //     .map((_, option) => option.attribs.value).get()
+            //     .filter(account => account > 0);
 
-                domPage(PAGE.SELECT_ACCOUNT).attr('value', account);
+            // console.log(accounts)
+                
+            // for (const account of accounts) {
 
-                const { futureMoneyEvents, pastMoneyEvents, futureActiveEvents, pastActiveEvents } = await this._getDataPage(domPage, cookieManager, traceOperations);
+            //     /* istanbul ignore next */
+            //     if (traceOperations)
+            //         console.log(`Selecting account ${account}`);
+
+            //     domPage(PAGE.SELECT_PRODUCT).attr('value', account);
+        
+                const { cetipStocks } = await this._getDataPage(domPage, cookieManager, traceOperations);
 
                 // Save the result
                 result.push({
                     institution: institution.label,
-                    account: account,
-                    futureMoneyEvents: futureMoneyEvents,
-                    pastMoneyEvents: pastMoneyEvents,
-                    futureActiveEvents: futureActiveEvents,
-                    pastActiveEvents: pastActiveEvents
+                    // account: account,
+                    cetipStocks: cetipStocks
                 });
-            }
+            // }
         }
 
         return result;
     }
 
     /**
-     * Returns the available options to get Dividends data
+     * Returns the available options to get CetipStock data
      * @param {FetchCookieManager} cookieManager - FetchCookieManager to work with
      * @param {typedefs.CeiCrawlerOptions} [options] - Options for the crawler
-     * @returns {Promise<typedefs.DividendsOptions>} - Options to get data from dividends
+     * @returns {Promise<typedefs.CetipStockOptions}> - Options to get data from cetip stock
      */
-    static async getDividendsOptions(cookieManager, options = null) {
+    static async getCetipStockOptions(cookieManager, options = null) {
         const getPage = await cookieManager.fetch(PAGE.URL);
         const domPage = cheerio.load(await getPage.text());
+
 
         const minDateStr = domPage(PAGE.DATE_MIN_VALUE).text().trim();
         const maxDateStr = domPage(PAGE.DATE_MAX_VALUE).text().trim();
 
-        // Get all institutions to iterate
         const institutions = domPage(PAGE.SELECT_INSTITUTION_OPTIONS)
             .map((_, option) => ({
                 value: option.attribs.value,
@@ -244,27 +241,25 @@ class DividendsCrawler {
 
         for (const institution of institutions) {
             domPage(PAGE.SELECT_INSTITUTION).attr('value', institution.value);
-            const formDataStr = CeiUtils.extractFormDataFromDOM(domPage, FETCH_FORMS.DIVIDENDS_INSTITUTION);
+            const formDataStr = CeiUtils.extractFormDataFromDOM(domPage, FETCH_FORMS.CETIP_STOCK_INSTITUTION);
 
-            const getAcountsPage = await cookieManager.fetch(PAGE.URL, {
-                ...FETCH_OPTIONS.DIVIDENDS_INSTITUTION,
+            const getProductsPage = await cookieManager.fetch(PAGE.URL, {
+                ...FETCH_OPTIONS.CETIP_STOCK_INSTITUTION,
                 body: formDataStr
             });
 
-            const getAcountsPageTxt = await getAcountsPage.text();
+            const getProductsPageTxt = await getProductsPage.text();
 
-            const getAcountsPageDom = cheerio.load(getAcountsPageTxt);
+            const getProductsPageDom = cheerio.load(getProductsPageTxt);
 
-            const accounts = getAcountsPageDom(PAGE.SELECT_ACCOUNT_OPTIONS)
+            const products = getProductsPageDom(PAGE.SELECT_PRODUCT_OPTIONS)
                 .map((_, option) => option.attribs.value).get()
                 .filter(accountId => accountId > 0);
 
-            institution.accounts = accounts;
+            institution.products = products;
         }
 
         return {
-            minDate: minDateStr,
-            maxDate: maxDateStr,
             institutions: institutions
         }
     }
@@ -277,63 +272,52 @@ class DividendsCrawler {
      */
     static async _getDataPage(dom, cookieManager, traceOperations) {
         while(true) {
-            const formDataHistory = CeiUtils.extractFormDataFromDOM(dom, FETCH_FORMS.DIVIDENDS_ACCOUNT, {
+            const formDataCetipStock = CeiUtils.extractFormDataFromDOM(dom, FETCH_FORMS.CETIP_STOCK_ACCOUNT, {
                 ctl00$ContentPlaceHolder1$ToolkitScriptManager1: 'ctl00$ContentPlaceHolder1$updFiltro|ctl00$ContentPlaceHolder1$btnConsultar',
                 __EVENTARGUMENT: '',
                 __LASTFOCUS: ''
             });
             
-            const dividendsRequest = await cookieManager.fetch(PAGE.URL, {
-                ...FETCH_OPTIONS.DIVIDENDS_ACCOUNT,
-                body: formDataHistory
+            const cetipStockRequest = await cookieManager.fetch(PAGE.URL, {
+                ...FETCH_OPTIONS.CETIP_STOCK_ACCOUNT,
+                body: formDataCetipStock
             });
 
-            const dividendsText = normalizeWhitespace(await dividendsRequest.text());
-            const errorMessage = CeiUtils.extractMessagePostResponse(dividendsText);
+            const cetipStocksText = normalizeWhitespace(await cetipStockRequest.text());
+            const errorMessage = CeiUtils.extractMessagePostResponse(cetipStocksText);
 
             if (errorMessage && errorMessage.type === 2) {
                 throw new CeiCrawlerError(CeiErrorTypes.SUBMIT_ERROR, errorMessage.message);
             }
 
-            const dividendsDOM = cheerio.load(dividendsText);
+            const cetipStocksDOM = cheerio.load(cetipStocksText);
 
             // Process the page
             /* istanbul ignore next */
             if (traceOperations)
-                console.log(`Processing dividends data`);
+                console.log(`Processing cetip stock data`);
 
-            const futureMoneyEvents = this._processEvents(dividendsDOM, PAGE.FUTURE_EVENTS_TITLE, DIVIDENDS_MONEY_TABLE_HEADERS);
-            const pastMoneyEvents = this._processEvents(dividendsDOM, PAGE.PAST_EVENTS_TITLE, DIVIDENDS_MONEY_TABLE_HEADERS);
-            const futureActiveEvents = this._processEvents(dividendsDOM, PAGE.FUTURE_ACTIVE_EVENTS_TITLE, DIVIDENDS_ACTIVE_TABLE_HEADERS);
-            const pastActiveEvents = this._processEvents(dividendsDOM, PAGE.PAST_ACTIVE_EVENTS_TITLE, DIVIDENDS_ACTIVE_TABLE_HEADERS);
+            const cetipStocks = this._processCetipStocks(cetipStocksDOM);
 
-            if (errorMessage.type !== undefined || futureMoneyEvents.length > 0 || pastMoneyEvents.length > 0 || futureActiveEvents.length > 0 || pastActiveEvents.length > 0) {
+            if (errorMessage.type !== undefined || this._hasLoadedData(cetipStocksDOM)) {
                 return {
-                    futureMoneyEvents,
-                    pastMoneyEvents,
-                    futureActiveEvents,
-                    pastActiveEvents
+                    cetipStocks
                 };
             }
             
-            const updtForm = CeiUtils.extractUpdateForm(dividendsText);
+            const updtForm = CeiUtils.extractUpdateForm(cetipStocksText);
             CeiUtils.updateFieldsDOM(dom, updtForm);
         }
     }
 
     /**
-     * Process the events given the parameters
+     * Process the stock cetip stock to a DTO
      * @param {cheerio.Root} dom DOM table stock history
-     * @param {String} tableTitle The title of the table to process the events
      */
-    static _processEvents(dom, tableTitle, tableHeaders) {
-        const headers = Object.keys(tableHeaders);
+    static _processCetipStocks(dom) {
+        const headers = Object.keys(CETIP_STOCKS_TABLE_HEADER);
 
-        const data = dom(PAGE.TABLE_TITLE_SELECTOR)
-            .filter((_, el) => dom(el).text().includes(tableTitle))
-            .first()
-            .map((_, el) => dom(el).parent())
-            .map((_, el) => dom(PAGE.TABLE_CLASS_ROWS, el).get())
+        const data = dom(PAGE.CETIP_STOCKS_TABLE_BODY_ROWS)
             .map((_, tr) => dom('td', tr)
                 .map((_, td) => dom(td).text().trim())
                 .get()
@@ -341,11 +325,20 @@ class DividendsCrawler {
                     dict[headers[idx]] = txt;
                     return dict;
                 }, {})
-            )
-            .get();
+            ).get();
 
-        return CeiUtils.parseTableTypes(data, tableHeaders);
+        return CeiUtils.parseTableTypes(data, CETIP_STOCKS_TABLE_HEADER);
     }
+
+    /**
+     * Check wheter the table was rendered on the screen to stop trying to get data
+     * @param {cheerio.Root} dom DOM table stock history
+     */
+    static _hasLoadedData(dom) {
+       const query = dom(`${PAGE.RESULT_FOOTER_100}`);
+       return query.length > 0;
+    }
+
 }
 
-module.exports = DividendsCrawler;
+module.exports = CetipStockCrawler;

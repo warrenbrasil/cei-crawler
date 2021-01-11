@@ -29,11 +29,21 @@ class CeiUtils {
             if (type === "string") return value;
             if (type === "int") return parseInt(value.replace(".", ""));
             if (type === "float")
-                return parseFloat(value.replace(".", "").replace(",", "."));
+                return value === "N/A" 
+                    ? 0.00
+                    : parseFloat(value.replace(".", "").replace(",", "."));
             if (type === "date")
                 return value === "01/01/0001"
                     ? null
                     : new Date(value.split("/").reverse());
+            if (type === "boolean") 
+                return value === "Sim" || value === "True"
+                    ? true
+                    : false;
+            if (type === "floatUs")
+                return value === "N/A" 
+                    ? 0.00
+                    : parseFloat(value);
         };
 
         return tableData.map((row) =>
