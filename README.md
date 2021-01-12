@@ -299,6 +299,205 @@ Resultado:
 }
 ```
 
+#### getWarrantys(_date_)
+Método que processa as garantias. O retorno será um uma lista com todas operações de garantia efetuadas dentro do período informado, se nenhuma data for passada o método retornará o dia atual.
+```javascript
+let warrantys = await ceiCrawler.getWarrantys(date);
+```
+Resultado:
+```javascript
+[
+    {
+        institution: '190 - WARREN CVMC LTDA',
+        account: 12345,
+        warrantys: [
+            {
+                type: "Acao/ETF/UNIT/Outros",
+                code: "MGLU3",
+                quantity: 1,
+                unitPrice: 16.21,
+                warrantyValue: 16.21
+            }
+        ]
+    }
+]
+```
+#### getWarrantysOptions()
+Retorna as opções dos formulários da página de garantias
+```javascript
+const warrantysOptions = await ceiCrawler.getWarrantysOptions();
+```
+Resultado:
+```javascript
+{
+  "minDate": "28/08/2017",
+  "maxDate": "08/01/2021",
+  "institutions": [
+    {
+      "value": "190",
+      "label": "190 - WARREN CVMC LTDA",
+    }
+  ]
+}
+```
+
+#### getLoans(_date_)
+Método que processa os empréstimos de ativos. O retorno será um uma lista com todas operações de empréstimos efetuadas dentro do período informado, se nenhuma data for passada o método retornará o dia atual.
+```javascript
+let loans = await ceiCrawler.getLoans(date);
+```
+Resultado:
+```javascript
+[
+    {
+        institution: '190 - WARREN CVMC LTDA',
+        account: 12345,
+        loans: [
+            {
+                code: "BBAS3",
+                isin: "BRBBASACNOR3",
+                quantity: 1,
+                nature: "Tomador",
+                registerDate: "2021-01-05T03:00:00.000Z",
+                dueDate: "2021-02-18T03:00:00.000Z",
+                allowEarlySettlement: true,
+                referencePrice: 38,
+                financialVolume: 38,
+                contractNumber: "000000000000000000-1",
+                modality: "Registrado"
+            }
+        ]
+    }
+]
+```
+#### getLoansOptions()
+Retorna as opções dos formulários da página de empréstimos
+```javascript
+const loansOptions = await ceiCrawler.getLoansOptions();
+```
+Resultado:
+```javascript
+{
+  "minDate": "10/11/2020",
+  "maxDate": "08/01/2021",
+  "institutions": [
+    {
+      "value": "190",
+      "label": "190 - WARREN CVMC LTDA",
+      "accounts": [
+        "12345"
+      ]
+    }
+  ]
+}
+```
+
+#### getCetipStock(_date_)
+Método que processa os Cetip Ativos Financeiros. O retorno será um uma lista com todas operações de cetip ativos financeiros efetuadas dentro do período informado, se nenhuma data for passada o método retornará o dia atual.
+```javascript
+let cetipStock = await ceiCrawler.getCetipStock(date);
+```
+Resultado:
+```javascript
+[
+    {
+        institution: '190 - WARREN CVMC LTDA',
+        account: 12345,
+        cetipStocks: [
+            {
+                onDate: "2021-01-07T03:00:00.000Z",
+                instrument: "CDB",
+                code: "CDB119BCXCT",
+                type: "DEPOSITADO",
+                issuer: "BANCO PAN S/A",
+                indexer: "PREFIXADO",
+                issueDate: "2019-03-20T03:00:00.000Z",
+                dueDate: "2022-03-21T03:00:00.000Z",
+                quantityAvail: 90,
+                quantityUnavail: 0,
+                burdensQuantityReceived: 0,
+                burdensQuantityProvided: 0,
+                counterpart: "",
+                observation: "",
+                borderQuantityProvided: 0
+            }
+        ]
+    }
+]
+```
+#### getCetipStockOptions()
+Retorna as opções dos formulários da página de cetip ativos financeiros
+```javascript
+const cetipStockOptions = await ceiCrawler.getCetipStockOptions();
+```
+Resultado:
+```javascript
+{
+  "institutions": [
+    {
+      "value": "190",
+      "label": "190 - WARREN CVMC LTDA",
+      "products": [
+        "CDB"
+      ]
+    }
+  ]
+}
+```
+
+#### getCetipFurniture(_date_)
+Método que processa os Cetip Valores Mobiliários/Derivativos. O retorno será um uma lista com todas operações de cetip valores mobiliários/derivativos efetuadas dentro do período informado, se nenhuma data for passada o método retornará o dia atual.
+```javascript
+let cetipFurniture = await ceiCrawler.getCetipFurniture(date);
+```
+Resultado:
+```javascript
+[
+    {
+        institution: '190 - WARREN CVMC LTDA',
+        account: 12345,
+        cetipFurnitures: [
+            {
+                onDate: "2021-01-07T03:00:00.000Z",
+                instrument: "CDB",
+                code: "CDB119BCXCT",
+                type: "DEPOSITADO",
+                issuer: "BANCO PAN S/A",
+                indexer: "PREFIXADO",
+                issueDate: "2019-03-20T03:00:00.000Z",
+                dueDate: "2022-03-21T03:00:00.000Z",
+                quantityAvail: 90,
+                quantityUnavail: 0,
+                burdensQuantityReceived: 0,
+                burdensQuantityProvided: 0,
+                counterpart: "",
+                observation: "",
+                borderQuantityProvided: 0
+            }
+        ]
+    }
+]
+```
+#### getCetipFurnitureOptions()
+Retorna as opções dos formulários da página de cetip valores mobiliários/derivativos
+```javascript
+const cetipFurnitureOptions = await ceiCrawler.getCetipFurnitureOptions();
+```
+Resultado:
+```javascript
+{
+  "institutions": [
+    {
+      "value": "190",
+      "label": "190 - WARREN CVMC LTDA",
+      "products": [
+        "CDB"
+      ]
+    }
+  ]
+}
+```
+
 ## Opções
 Na criação de um `CeiCrawler` é possivel especificar alguns valores para o parâmetro `options` que modificam a forma que o crawler funciona. As opções são:
 
@@ -368,6 +567,10 @@ try {
 - [x] Dividendos
 - [x] Carteira de ações
 - [x] Tesouro Direto
+- [x] Garantias
+- [x] Empréstimo
+- [x] Cetip - Ativos
+- [x] Cetip - Mobiliários / Derivativos
 
 ## Licença
 MIT
